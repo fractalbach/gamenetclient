@@ -1,236 +1,1079 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<title>Chat Example</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script type="text/javascript">
-window.onload = function () {
-    var conn;
-    var msg = document.getElementById("msg");
-    var log = document.getElementById("log");
-    var cmdMenu = document.getElementById("commandTypeMenuInput");
-    var cmdText = document.getElementById("commandTextInput");
-    var xInput = document.getElementById("xInput");
-    var yInput = document.getElementById("yInput");
-    var zInput = document.getElementById("zInput");
+    <head>
+        <title>💥 [Offline Bomba] 💣 </title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script type="text/javascript">
+            
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                             Global Variables
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    function appendLog(item) {
-        log.appendChild(item);
+
+//                        ~ The Holy Page Divider ~ 
+//                 ~ Only to be used in times of Emergency ~
+
+// 
+//                                 ~ | ~
+//    |------------------------------+------------------------------| 
+//                                 ~ | ~
+
+// Colors of the Various Types of Squares
+var PLAYER_1 = "#030";
+var PLAYER_2 = "#49F";
+var SQUARE_3 = "#F00";
+var SQUARE_4 = "#D10";
+var SQUARE_5 = "#B20";
+var SQUARE_6 = "#920";
+var SQUARE_7 = "#820";
+var EMPTY_SQUARE = "#AAA"
+var UNKNOWN_SQUARE = "#A55";
+
+
+// Dimensions of the Map and the Canvas Grid
+var MAP_WIDTH = 48; 
+var MAP_HEIGHT = 48;
+var canvasSize = {x: 1248, y: 1248};
+var grid = {size: {x: MAP_WIDTH, y: MAP_HEIGHT}};
+var gridBox = {
+    x: canvasSize.x / MAP_WIDTH, 
+    y: canvasSize.y / MAP_HEIGHT
+};
+
+
+// Creating the Cellular Automata
+var myLife = new Life(MAP_WIDTH, MAP_HEIGHT);
+
+
+// About the Game Timer 
+// Search for GameUpdate() to see the function that triggers.
+//
+var GameTickRate = 500; // in milliseconds
+var TickCount = 0;
+
+
+
+
+
+
+
+
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                          Cellular Automata
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+// Life is the object that holds EVERYTHING about the current state 
+// of the Cellular Automata.  This includes both its state, and the 
+// functions that define its rules. 
+//
+// Try changing the "this.GetNextCellValue()" Function to mess around
+// with the automata rules!  Or define a new type of "Neighborhood"!
+// 
+function Life(w, h)
+{
+    this.w = w;
+    this.h = h;
+    this.generation = 0;
+    this.current = MakeRandomMatrix(w, h, 0, 1);
+    this.future = MakeNewMatrix(w, h);
+
+    //  ______________________________________________________________________
+    // +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+    //                       Change Stuff Here!                        
+    // +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+    //  GetNextCellValue is where the fun all happens!  
+    //  Input: the x,y coordinates of the cell you are investigating
+    //  Output: the Cell Type that it will become in the next generation!
+    // 
+    //  Try changing around the rules of this function to get interesting
+    //  results! 
+    //
+
+    this.GetNextCellValue = function(a, b) {
+        var me = this.WhatIs(a, b);
+        var n = this.CountNeighbors(a, b);
+
+        if (n[0] + n[1] + n[2] != 8) {
+            return 2;
+        }
+
+        if (n[1] == 3) {
+            return 1;
+        }
         
+        if ((me == 1) && (n[1] == 2)) {
+            return 1;
+        }
+        
+        return 0;
+    };
+
+    //  ______________________________________________________________________
+    // \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
+
+
+
+    // ChangeValue is a helper function for directly changing a value 
+    // on the grid.  Should probably use this if you are clicking stuff.
+    //
+    this.ChangeValue = function(x, y, newval) {
+        this.current[x][y] = newval;
+    };
+
+    this.WhatIs = function(xin, yin) {
+        try {
+            var output = this.current[xin][yin];
+        } catch(e) {
+            return 0;
+        }
+        if (!output) {
+            return 0;
+        }
+        return output;
+    };
+
+    // CountNeighbors returns the counts of cell types that are located 
+    // near the given cell at the given coordinates x, y.
+    // 
+    // "Near" is defined as the 8 cells located around a cell on a 
+    // 2-dimensional grid of boxes.  It is also known as the "Moore Area"
+    // in Cellular Automata.
+    //
+    this.CountNeighbors = function(xx, yy) {
+        var map = NewNeighborhood(3);
+        for (var p = -1; p <= 1; p++) {
+            for (var q = -1; q <= 1; q++) {
+                if ((p == 0) && (q == 0)) {
+                    continue;
+                }
+                var asdfval = this.WhatIs((xx + p), (yy + q));
+                map[asdfval]++;
+            }
+        }
+        return map;
+    };
+    
+    // NextGeneration advances the entire Life to the next generation.
+    // Using the current grid, it calculates a new state and saves it 
+    // into the future grid.  At the end of the calculation, the future 
+    // grid replaces the current, and the generation number increases by 1.  
+    //
+    this.NextGeneration = function() {
+        var maxI = this.w;
+        var maxJ = this.h;
+        for (var iz = 0; iz < maxI; iz++) {
+            for (var jz = 0; jz < maxJ; jz++) {
+                this.future[iz][jz] =  this.GetNextCellValue(iz, jz);
+            }
+        }
+        var test = this.future;
+        this.current = test;
+        this.generation++;
+        return this.generation;
+    };
+}
+
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                            Helpful Functions 
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+// RandomInt returns a "random" integer between 0 and highval.
+// NOTE:  This currently has odd behavior....
+//        ...doesn't work quite right for odd numbers.
+//
+function RandomInt(highval)
+{
+    return Math.floor(Math.random() * highval);
+}
+
+// MakeNewMatrix initializes a matrix of zeros. Size = (w * h).
+function MakeNewMatrix(w, h) 
+{
+    var matrix = [];
+    for (var i = 0; i < w; i++) {
+        var col = [];
+        for (var j = 0; j < h; j++) {
+            col.push(0);
+        }
+        matrix.push(col);
+    } 
+    return matrix;
+}
+
+// RandomizeMatrix returns a matrix of integers between lowval and highval. 
+function MakeRandomMatrix(w, h, lowval, highval)
+{
+    var matrix = [];
+    for (var i = 0; i < w; i++) {
+        var col = [];
+        for (var j = 0; j < h; j++) {
+            col.push(RandomInt(highval)+lowval);
+        }
+        matrix.push(col);
+    } 
+    return matrix;
+}
+
+// Neighborhood returns a Map of Square Types -> how many there are.
+// So if n = Neighborhood(), then n[1] = number of #1 type squares.
+function NewNeighborhood(numberOfTypes)
+{
+    var mapz = {};
+    for (var iter = numberOfTypes-1; iter >= 0; iter--) {
+        mapz[iter] = 0;
+    }
+    return mapz;
+}
+
+// gridHash converts a coordinate pair (x,y) into a single value, while
+// still representing the same spot on the grid.  Useful when adding
+// unique elements to Sets. 
+//
+function gridHash(x,y) 
+{
+    return (x + (y*MAP_WIDTH));
+}
+
+// gridUnHash simply reverses the process of gridhash.  Converting a 
+// single values back into an (x,y) pair.
+function gridUnHash(hash) 
+{
+    return {
+        x: hash % MAP_WIDTH,
+        y: Math.floor(hash / MAP_WIDTH)
+    };
+}
+
+
+
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//         After the Page Loads       +       Main Sequence of Events
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+window.onload = function () {
+// asdf
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                           Start Canvas  
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // 
+    // There are way to many variables here.  My editor has a bright blue
+    // color for these variables.  It is burning holes into my eyes just
+    // looking at this page.  It also burns a hole into my soul.
+    //
+    // This has GOT to be terrible practice.
+    // 
+
+    var canvas = document.getElementById('MainCanvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = canvasSize.x;
+    canvas.height = canvasSize.y;
+
+    var w = new World(ctx);
+    w.drawGridLines();
+    w.c.save();
+
+    var ToggleButton = document.getElementById("ButtonToggleCLI");
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                           Game Timer 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    
+    window.setInterval(function() {GameUpdate()}, GameTickRate);
+
+    function GameTick() 
+    {
+        GameUpdate();
+        TickCount++;
+    }
+
+    function GameUpdate() 
+    {
+        myLife.NextGeneration();
+        DrawColorsFromByteMatrix(w, myLife.current);
+    }
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                        Utility Functions
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    // getMousePos figures out where your mouse is relative to the canvas.
+    // The values (event.clientX) and (event.clientY) will give you the 
+    // mouse position relative to the top left corner of the screen;
+    // and will return a value that you probably weren't expecting.
+    // 
+    // This happens especially when you have scrolled away from the browser's
+    // initial position.  So, this handy function will take of that:
+    // 
+    function getMousePos(canvas, evt) 
+    {
+        var rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top,
+        };
+    }
+    
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                      Canvas Event Listeners 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // Create an array to store the mouse locations the mouse is dragged 
+    // across the screen.
+    var userMousePathSet = new Set();
+
+    // HandleMouseMove is the function that fires every time the mouse is 
+    // dragged across the screen.  It SHOULD happen only when the mouse
+    // is pressed down.  It SHOULD also happen on mobiles, when somebody
+    // is pressing down and swiping across the surface of the device.
+    function HandleMouseMove(event) 
+    {
+        // Calculate the box that the mouse is currently hovering over.
+        var rect = canvas.getBoundingClientRect();
+        x = Math.floor((event.clientX - rect.left)  / gridBox.x);
+        y = Math.floor((event.clientY - rect.top) / gridBox.y);
+
+        // If the mouse is over a new box, we want to remember it.
+        // Hash up the (x,y)! Now, a single value can be added to a Set.
+        // Remember this box position for the next iteration.
+        if ( (x != lastX) || (y != lastY) ) 
+        {
+            userMousePathSet.add(gridHash(x, y));
+            w.drawCharacterBox(x,y , 'gray');
+            lastX = x;
+            lastY = y;
+        }
+    }
+
+
+    // When the mouse is pressed down, track the movements.
+    canvas.addEventListener('mousedown', function(event)
+    {
+
+        // Quick check to make sure you are on Player1 or Player 2.
+        switch (document.getElementById("ColorSelect").value) {
+            case '1': case '2': break;
+            default: return;
+        }
+        if (event == null) {
+            return;
+        }
+
+        // Initialize variables for tracking boxes that mouse passes through.
+        lastX = -1;
+        lastY = -1;
+        userMousePathSet = new Set();
+
+        // Add the MouseMove event listener, which runs this function
+        // very frequently while the mouse moves across the canvas.
+        canvas.addEventListener('mousemove', HandleMouseMove, true);
+        
+    });
+
+    
+    //                                 ~ | ~
+    //    |------------------------------+------------------------------| 
+    //                                 ~ | ~
+
+    // When the mouse is lifted up, remove the mouseMove listener,
+    // and send a message to apply those squares to the grid.
+    canvas.addEventListener('mouseup', function(event) 
+    {
+        // Remove the listener.  Helps prevent pointless events from firing.
+        canvas.removeEventListener("mousemove", HandleMouseMove, true);
+
+        var changes = [];
+
+        // UnHash the values from the set into (x,y) coordinates.
+        // Then, draw boxes on those squares so that it will look neat.
+        userMousePathSet.forEach(function(val) 
+        {
+            var box = gridUnHash(val);
+            //changes.push( getNextLifeChange(box.x, box.y) );
+            myLife.ChangeValue(box.x, box.y, UserScribblesAt(x,y));
+            w.drawCharacterBox(box.x, box.y, 'white');
+        });
+        
+        
+            // __________________________
+            // Cool Accidental Thing: 
+            // This will change the highlighted spots into the next gen.
+            // var newVal = myLife.GetNextCellValue(box.x, box.y);
+            // __________________________
+
+
+        // Assume that if is only 1 box selected, it was just a regular click.
+        // If there are multiple: then it is a bulk message.
+        // Format the message, and send it across the websocket connection.
+        //if (changes.length >= 2) {
+            // var message = {EventType: "ChangeMany", Changes: changes};
+            // conn.send(JSON.stringify(message));
+        //}
+
+        // Just in case; reinitialize the Set variable.
+        userMousePathSet = new Set();
+    });
+
+
+
+    //                                 ~ | ~
+    //    |------------------------------+------------------------------| 
+    //                                 ~ | ~
+
+    function getNextLifeChange(x,y) 
+    {
+        var newval;
+        switch (document.getElementById("ColorSelect").value) 
+        {
+            case '1': 
+                newval = 1;
+                color = PLAYER_1;
+                break;
+
+            case '2': 
+                newval = 2; 
+                color = PLAYER_2;
+                break;
+
+            default:
+                return;
+        }
+        return { Value: newval, Location: {X: x, Y: y,} };
+    }
+
+    // Whenever the Canvas is clicked, boxes will be changed!
+    // TODO: Only send a message to the server if websocket connection = true
+    canvas.addEventListener('click', function(event) 
+    {
+        // Calculate the Box that the mouse has clicked on.
+        var pos = getMousePos(canvas, event)
+        var x = Math.floor(pos.x / gridBox.x);
+        var y = Math.floor(pos.y / gridBox.y);
+        var newval;
+        UserScribblesAt(x,y);
+        if (ToggleButton.tabIndex == 1) {ToggleButton.tabIndex = 0;}
+    });
+
+    // ad;fkjasd;fkajsd;fkajsd;fklasdfj;kasdfj;asdlkf
+    var UserScribblesAt  = function(x, y) {
+        var val = document.getElementById("ColorSelect").value;
+       switch (val) 
+        {
+            case '1': 
+                LifeChange(x, y, 1);
+                newval = 1;
+                color = PLAYER_1;
+                break;
+
+            case '2': 
+                LifeChange(x, y, 2);
+                newval = 2; 
+                color = PLAYER_2;
+                break;
+
+            case 'bomba1': 
+                DropLaBomba(x, y, 1);
+                color = "#FFF";
+                break;
+
+            case 'bomba2': 
+                DropLaBomba(x, y, 2);
+                color = "#FFF";
+                break;
+
+            default: return;
+        }
+        w.drawCharacterBox(x, y, color);
+        return newval;
+    };
+
+
+    // LifeChange formats and sends a command to the server that will
+    // trigger the switching of a grid color.
+    var LifeChange = function(x, y, newval) 
+    {
+    
+    };
+
+    var DropLaBomba = function(x, y, player1or2) 
+    {
+
+    };
+
+
+    // takes a parsed game state message object (array of key:object pairs).
+    // iterates through each one, and draws them on the screen.
+    // TODO: use the KEY (which is the ID) to do something
+    // TODO: add support for different TYPES of objects
+    var DrawGameStateObjects = function() 
+    {
+
+    };
+
+
+
+    function appendLog(item) 
+    {
+        log.appendChild(item);
         // var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
         // if (doScroll) {
         log.scrollTop = log.scrollHeight - log.clientHeight;
         // }
     }
 
-    document.getElementById("form").onsubmit = function () {
-        if (!conn) {
-            return false;
+    // __________________________________________________________________
+    //                    Chat Room ~ Input Events
+    // ------------------------------------------------------------------
+
+    var toggleGameChatroom = function () {
+        if (MyMessageWrap.className == "visible") {
+            MyMessageWrap.className = "invisible";     
+        } else {
+            MyMessageWrap.className = "visible";
         }
-        if (!msg.value) {
-            return false;
-        }
-        var j = {
-            "Type": "chat",
-            "Body": msg.value,
-        };
-        conn.send(JSON.stringify(j));
-        msg.value = "";
-        return false;
     };
 
-
-    document.getElementById("commandForm").onsubmit = function () {
-        if (!conn) {return false;}
-        if (!cmdText.value) {return false;}
-
-        switch (cmdMenu.value) {
-        case "move": 
-            vector = cmdText.value.split(",");
-            var x = parseFloat(vector[0])
-            var y = parseFloat(vector[1])
-            var z = parseFloat(vector[2])
-            var j = {
-                "Type": "move",
-                "Body": [x, y, z]
-            }
-            break;
-
-        default:   
-            var j = {
-                "Type": cmdMenu.value,
-                "Body": cmdText.value,
-            };
+    ToggleButton.onfocus = function() {
+        if (ToggleButton.tabIndex == 0) {
+            ToggleButton.tabIndex = 1;
         }
-
-        var messageJson = JSON.stringify(j);
-        makePersonalLogEntry(messageJson); 
-        cmdText.value = "";
-        conn.send(messageJson);
-        return false;
     };
+    ToggleButton.onclick = function () {toggleGameChatroom();};
+    ToggleButton.onkeypress = function() {toggleGameChatroom();};
 
     var makePersonalLogEntry = function (stuff) {
         var item = document.createElement("div");
         item.className = 'message personal';
         item.innerText = stuff;
         appendLog(item);
-    }
-
-    if (window["WebSocket"]) {
-        conn = new WebSocket("ws://35.230.55.6/ws");
-        conn.onclose = function (evt) {
-            var item = document.createElement("div");
-            item.innerHTML = "<b>Connection closed.</b>";
-            appendLog(item);
-        };
-        conn.onmessage = function (evt) {
-            var messages = evt.data.split('\n');
-            for (var i = 0; i < messages.length; i++) {
-                var item = document.createElement("div");
-                item.className = 'message';
-                item.innerText = messages[i];
-                appendLog(item);
-            }
-        };
-    } else {
-        var item = document.createElement("div");
-        item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
-        appendLog(item);
-    }
-
+    };
 
 };
-</script>
-<style type="text/css">
 
 
-html {
-    overflow: hidden;
-}
-body {
-    position: fixed;
-    padding: 0;
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    background: green;
-}
 
-.visible {
-    display: all;
-}
-.invisible {
-    display: hidden;
-}
 
-#CanvasWrap {
-    height: calc(40%);
-    overflow: hidden;
-}
-#MessageWrap {
-    height: calc(60%);
-    overflow: hidden;
+
+
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                           Decoding Messages
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// myDecode decodes a Base64 string into an array of bytes. (uint8)
+//
+// Credits: stack overflow; people who asked & answered the question:
+// https://stackoverflow.com/questions/16245767/creating-a-blob-from-a-base64-string-in-javascript
+//
+function myDecode(msg) {
+    byteCharacters = atob(msg);
+    var byteNumbers = new Array(byteCharacters.length);
+    for (var i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    var byteArray = new Uint8Array(byteNumbers);
+    return byteArray;
 }
 
-
-
-
-
-#CanvasArea {
-    height: 90%;
-    border: 3px dotted;
-    overflow: hidden;
+function Uint8ArrayToMatrix(byteArray, w, h) {
+    var matrix = [];
+    var mySlice = [];
+    for (var i = 0; i < h; i++) {
+        matrix.push(byteArray.slice(i*w, (i+1)*w)); 
+    }
+    return matrix;
+}
+function DrawColorsFromByteMatrix(world, matrix) {
+    for (var i = matrix.length - 1; i >= 0; i--) {
+        for (var j = matrix[i].length - 1; j >= 0; j--) {
+            switch (matrix[i][j]) {
+            case 0: x = EMPTY_SQUARE; break;
+            case 1: x = PLAYER_1; break;
+            case 2: x = PLAYER_2; break;
+            case 3: x = SQUARE_3; break;
+            case 4: x = SQUARE_4; break;
+            case 5: x = SQUARE_5; break;
+            case 6: x = SQUARE_6; break;
+            case 7: x = SQUARE_7; break;
+            default: x = UNKNOWN_SQUARE; break;
+            }
+            world.drawCharacterBox(i, j, x)
+        }
+    }
+}
+function UpdateMatrix(msg) {
+    return Uint8ArrayToMatrix(myDecode(msg), MAP_WIDTH, MAP_HEIGHT)
 }
 
-#MainCanvas {
-    // border: dotted;
-    // margin: 0 auto;
-    /* width: 80%;
-    height: 80%;
-    max-width: 100%;
-    max-height: 100%; */
+
+// ByteArrayToBoolMatrix converts []uint8  --into-->  [][]bool.
+//
+// Warning!  There is minimal error checking.  It is assumed that you do not
+// have any leftover bits!  For now, Only input a byteArray if the last byte
+// fully describes 8 booleans.
+//  ByteArrayToBoolMatrix
+
+
+
+
+function ByteArrayToBoolMatrix(byteArray, h) {
+    p = ByteArrayToBoolArray(byteArray);
+    q = BoolArrayToBoolMatrix(p, h);
+    return q;
+}
+
+function ByteArrayToBoolArray(byteArray) {
+    var counter = 0;
+    var outputArray = [];
+    var L = byteArray.length;
+
+    for (var i = 0; i < L; i++) {
+        var val = byteArray[i];
+        var slice = [];
+        for (var j = 7; j >= 0; j--) {
+            if (val >= (1 << j)) {
+                slice.unshift(true);
+                val -= (1 << j);
+            } else {
+                slice.unshift(false);
+            }
+        }
+        outputArray.push.apply(outputArray, slice);
+    }
+    return outputArray;
+}
+
+function BoolArrayToBoolMatrix(boolArray, h) {
+    var matrix = [];
+    counter = 0;
+    for (var i = 0; i < h; i++) {
+        var slice = [];
+        for (var j = 0; j < h; j++) {
+            slice.push(boolArray[counter]);
+            counter++;
+        }
+        matrix.push(slice);
+    }
+    return matrix;
 }
 
 
-.message {
-    /*
-    margin: 0.1em 0;
-    background-color: #CFF0FF;
-    padding: 0.1em 0.5em;
-    border-radius: 0.5em;
-    */
+
+
+
+
+
+
+
+
+
+
+
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                             Canvas World
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/*
+function draw() {
+    var canvas = document.getElementById('MainCanvas');
+    if (canvas.getContext) {
+        var ctx = canvas.getContext('2d');
+    } else {
+        console.log("Cannot get Context on the Canvas! Exiting Draw Function.")
+        return;
+    }
+    var w = new World(ctx);
+    w.drawGridLines();
+    w.c.save();
+    w.drawCharacterBox(1,1);
+    w.drawCharacterBox(3,9);
+    w.drawCharacterBox(10,13);
 }
-#log {
-    height: calc(100% - 5em);
-    background: #000;
-    color: #0C0;
-    overflow: auto;
-    font-family: monospace;
-    white-space: nowrap;
+*/
+
+
+
+function World(context) 
+{
+    this.c = context;
+
+    this.reDraw = function() {
+        var canvas = document.getElementById('MainCanvas');
+        this.c.clearRect(0, 0, canvas.width, canvas.height);
+        this.drawGridLines();
+    };
+
+    this.drawLine = function (x0, y0, xf, yf) {
+        this.c.beginPath();
+        this.c.moveTo(x0,y0);
+        this.c.lineTo(xf,yf);
+        this.c.stroke();
+    }
+
+    this.drawGridLines = function() {
+        this.c.strokeStyle = '#FFF'
+        for (var i = grid.size.x - 1; i >= 0; i--) {
+            var x0 = i*gridBox.x;
+            var xf = x0;
+            var y0 = 0;
+            var yf = canvasSize.y;
+            this.drawLine(x0, y0, xf, yf);
+        }
+        for (var j = grid.size.x - 1; j >= 0; j--) {
+            var x0 = 0;
+            var xf = canvasSize.x;
+            var y0 = j*gridBox.y;
+            var yf = y0;
+            this.drawLine(x0, y0, xf, yf);
+        }
+    }
+
+    this.drawCharacterBox = function(A, B, mycolor) {
+        var x = A * gridBox.x + 1;
+        var y = B * gridBox.y + 1;
+        var width = gridBox.x - 2;
+        var height = gridBox.y - 2;
+        if (!mycolor) {
+            this.c.fillStyle = 'rgb(300, 12, 112)';
+        } else {
+            this.c.fillStyle = mycolor;
+        }
+        this.c.fillRect(x, y, width, height);
+    }
+
+
+    this.drawCircle = function(A, B, color) {
+        this.c.beginPath();
+        if (!mycolor) {
+            this.c.fillStyle = 'rgb(0, 200, 200)';
+        } else {
+            this.c.fillStyle = mycolor;
+        }
+        this.c.arc(100,75,50,0,2*Math.PI);
+        this.c.stroke();
+    }
 }
-#form {
-    display: flex;
-    flex-direction: row;
-    height: 2em;
+
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                        Canvas Drawing Events
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+// takes a parsed game state message object (array of key:object pairs).
+// iterates through each one, and draws them on the screen.
+// TODO: use the KEY (which is the ID) to do something
+// TODO: add support for different TYPES of objects
+var DrawGameStateObjects = function() {
+    w.reDraw();
+    DrawTreesFromBoolMatrix(w, MatrixOfTrees);
+    Object.keys(ListOfObjects).forEach(function (key) {
+        try {   
+            A = list[key].Location[0];
+            B = list[key].Location[1];
+        } catch(e) {
+            //console.log("Location can't be parsed.");
+            return;
+        }
+        w.drawCharacterBox(A, B, gimmeColor(key));
+    });
+};
+
+
+// Tries to return a number between 0 and 255.
+// Not really a PRNG, its just a cosine function.
+// Used for making colors that stay consistent with player id's.
+function simplePRNGbyte(n) {
+    return (Math.cos(n* 255)+1) * 255 >> 1
 }
-#commandForm {
-    display: flex;
-    flex-direction: row;
-    height: 2em;
-}
-input {
-    width:20%;
-}
-#msg {
-    width: 80%;
+
+function gimmeColor(id) {
+    var r = simplePRNGbyte(id).toString();
+    var g = '0';
+    var b = simplePRNGbyte(id << 1).toString();
+    return 'rgb('+r+','+g+','+b+')'
 }
 
-.personal {
-    color: white;
+
+
+
+
+
+
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                           Borrowed Snippets
+// __________________________________________________________________________
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+// __________________________________________________________________
+//               Credits For The Following Code Snippets 
+//
+//          "Javascript: The Definitive Guide, 6th Edition"
+//                         by David Flanagan
+//                Published by O'Reilly Media, Inc., 2011
+//
+// ------------------------------------------------------------------
+// Define a regular polygon with n sides, centered at (x,y) with radius r.
+// The vertices are equally spaced along the circumference of a circle.
+// Put the first vertex straight up or at the specified angle.
+// Rotate clockwise, unless the last argument is true.
+function polygon(c,n,x,y,r,angle,counterclockwise) {
+    angle = angle || 0;
+    counterclockwise = counterclockwise || false;
+    c.moveTo(x + r*Math.sin(angle),  // Begin a new subpath at the first vertex
+             y - r*Math.cos(angle)); // Use trigonometry to compute position
+    var delta = 2*Math.PI/n;         // Angular distance between vertices
+    for(var i = 1; i < n; i++) {     // For each of the remaining vertices
+        angle += counterclockwise?-delta:delta; // Adjust angle
+        c.lineTo(x + r*Math.sin(angle),         // Add line to next vertex
+                 y - r*Math.cos(angle));
+    }
+    c.closePath();                   // Connect last vertex back to the first
 }
+// ==================================================================
+var deg = Math.PI/180;  // For converting degrees to radians
+// ==================================================================
+// Draw a level-n Koch Snowflake fractal on the canvas context c,
+// with lower-left corner at (x,y) and side length len.
+function snowflake(c, n, x, y, len) {
+    c.save();           // Save current transformation
+    c.translate(x,y);   // Translate origin to starting point
+    c.moveTo(0,0);      // Begin a new subpath at the new origin
+    leg(n);             // Draw the first leg of the snowflake
+    c.rotate(-120*deg); // Now rotate 120 degrees counterclockwise
+    leg(n);             // Draw the second leg
+    c.rotate(-120*deg); // Rotate again
+    leg(n);             // Draw the final leg
+    c.closePath();      // Close the subpath
+    c.restore();        // And restore original transformation
 
-</style>
-</head>
-<body>
+    // Draw a single leg of a level-n Koch snowflake.
+    // This function leaves the current point at the end of the leg it has
+    // drawn and translates the coordinate system so the current point is (0,0).
+    // This means you can easily call rotate() after drawing a leg.
+    function leg(n) {
+        c.save();               // Save the current transformation
+        if (n == 0) {           // Nonrecursive case:
+            c.lineTo(len, 0);   //   Just draw a horizontal line
+        }                       //                                       _  _
+        else {                  // Recursive case: draw 4 sub-legs like:  \/
+            c.scale(1/3,1/3);   // Sub-legs are 1/3rd the size of this leg
+            leg(n-1);           // Recurse for the first sub-leg
+            c.rotate(60*deg);   // Turn 60 degrees clockwise
+            leg(n-1);           // Second sub-leg
+            c.rotate(-120*deg); // Rotate 120 degrees back
+            leg(n-1);           // Third sub-leg
+            c.rotate(60*deg);   // Rotate back to our original heading
+            leg(n-1);           // Final sub-leg
+        }
+        c.restore();            // Restore the transformation
+        c.translate(len, 0);    // But translate to make end of leg (0,0)
+    }
+}
+// ==================================================================
 
 
-<div id="CanvasWrap">
-    <div id="CanvasArea">
-        <p>InfoBox Area</p>
-        </pre>
-        <!-- <canvas id="MainCanvas"></canvas> !-->
-    </div>
-</div>
 
+        </script>
+        <style type="text/css">
+            html {
+                overflow: hidden;
+            }
 
-<div id="MessageWrap">
+            body {
+                position: fixed;
+                padding: 0;
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                background: #522;
+            }
 
+            .visible {
+                display: all;
+            }
 
-    <form id="commandForm">
-        <input type="submit" value="Send  Command" />
-        <select id="commandTypeMenuInput">
-            <option value="chat">Chat</option>
-            <option value="move">Move</option>
-            <option value="create">Create</option>
-            <option value="delete">Delete</option>
-            <option value="logout">Login</option>
-            <option value="logout">Logout</option>
-        </select>
-        <input type="text" id="commandTextInput" size="64" autocomplete="off" />
+            .invisible {
+                display: none;
+            }
 
-    </form>
+            #MessageWrap {
+                height: calc(100% - 2em);
+                position: fixed;
+                width: 100%;
+                overflow: hidden;
+                top: 0 ;
+                background: #000;
+            }
 
+            #LogWrap {
+                height: calc(100% - 2em);
+            }
 
-    <div id="log"></div>
+            #CanvasWrap {
+                position: fixed;
+                display: block;
+                top: 0;
+                bottom: calc(2em + 2px);
+                left: 0;
+                right: 0;
+                overflow: hidden;
+            }
 
+            #CanvasArea {
+                display: block;
+                max-width: 100%;
+                max-height: 100%;
+                background: #555;
+                overflow: auto;
+            }
+
+            #CanvasBorder {
+                border: solid 2px;
+            }
+
+            #MainCanvas {
+                display: block;
+                margin: 0 auto;
+                background: #333;
+            }
+
+            .message {
+                margin: 0.1em 0;
+                padding: 0.1em 0.5em;
+            }
+
+            #log {
+                height: 100%;
+                color: #0C0;
+                overflow: auto;
+                font-family: monospace;
+                white-space: nowrap;
+            }
+
+            #commandForm {
+                display: flex;
+                flex-direction: row;
+                height: 2em;
+            }
+
+            #commandTextInput {
+                flex: 1;
+            }
+
+            #msg {
+                width: 80%;
+            }
+
+            .personal {
+                color: white;
+            }
+
+            #ButtonToggleCLI {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: black;
+                height: calc(2em + 2px);
+                vertical-align: middle;
+            }
+
+            #ButtonToggleCLI:hover {
+                background: #805;
+            }
+
+            select:focus, input:focus {
+                background: #cef;
+            }
+
+            #ButtonToggleCLI:focus {
+                background: #158;
+            }
+
+            #ButtonToggleCLI:active {
+                background: #095;
+            }
+
+            #ButtonToggleText {
+                user-select: none;
+                line-height: calc(2em);
+                border: 1px solid white;
+                text-align: center;
+                color: white;
+            }
+
+            #ColorSelect {
+                position: fixed;
+                width: 20em;
+                height: 3em;
+            }
+
+            option {
+                height: 2em;
+            }
+        </style>
+    </head>
+    <body id="theBody">
+        <div id="GameWrap">
+            <div id="CanvasWrap">
+                <div id="CanvasArea">
+                    <div id="CanvasBorder">
+                        <canvas id="MainCanvas" width="1248" height="1248"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div id="ColorSelectWrap">
+                <select id="ColorSelect">
+                    <option value="1">Player 1</option>
+                    <option value="bomba1">💣 Player 1 - La Bomba 💣</option>
+                    <option value="2">Player 2</option>
+                    <option value="bomba2">💣 Player 2 - La Bomba 💣</option>
+                </select>
+            </div>
+        </div>
+        <div id="MessageWrap" class="invisible">
+            <form id="commandForm">
+                <input id="ButtonSendCommand" type="submit" value="Send"/>
+                <select id="commandTypeMenuInput">
+                    <option value="chat">Chat</option>
+                    <option value="move">Move</option>
+                    <option value="create">Create</option>
+                    <option value="delete">Delete</option>
+                    <option value="logout">Login</option>
+                    <option value="logout">Logout</option>
+                </select>
+                <input type="text" id="commandTextInput" size="64" autocomplete="off"/>
+            </form>
+            <div id="LogWrap">
+                <div id="log"></div>
+            </div>
+            <!-- 
     <form id="form">
-        <input type="submit" value="Send" />
+        <input id="ButtonPlainSend" type="submit" value="Send" />
         <input type="text" id="msg" size="64" autocomplete="off" />
-
-
     </form>
-</div>
-
-</body>
+ -->
+        </div>
+        <div id="ButtonToggleCLI" tabindex="1" role="button">
+            <div id="ButtonToggleText">↕   Chat Room   ↕</div>
+        </div>
+    </body>
 </html>
