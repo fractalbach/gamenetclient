@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script type="text/javascript">
 "use strict";        
+
+// TODO:
+// 
+//    - Fix bug with the (x-1) and (y-1) thing.
+//    - Add hidden <button> to do tab switching.  Focus automatically to first elem.
+//    - 
+//
 // __________________________________________________________________________
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                             Global Variables
@@ -112,30 +119,35 @@ function Life(w, h)
 
   this.GetNextCellValue = function(a, b) {
 
-    var me = this.WhatIs(a, b); // The cell we are looking at.
+    var me = this.WhatIs(a, b); // The celll we are looking at.
+    //var n = CountNeighbors();
 
-    var N;
-    var S;
-    var W = this.Locate(a,b,-1,0); // West
-    var E =  this.Locate(a,b,1,0);// East
+
+    var S = this.WhatIs(a, b + 1); // South
+    var N = this.WhatIs(a, b - 1); // North
+    var W = this.WhatIs(a - 1, b); // West
+    var E = this.WhatIs(a + 1, b); // East
+
     var NW = this.Locate(a,b,1,1);//NorthWest
 
     switch(me)
     {           
-    case 0: //---------------------
+      case 0: //---------------------
 
-      if (W == 1) {return 1;}
-      if (E == 2) {return 2;}
-      //if (E == 1) {return 1;}
-      break; 
+        //if (E == 2) {return 2;} // Blue blocks drift to the Left
+        // if (W == 1) {return 1;} // Green Blocks drift Right
+        
+        if (N == 2) {return 2;} // Blue blocks drift Downward
+        if (S == 1) {return 1;} // Green blocks drift Upward
+
+        break; 
 
 
-    case 1: //---------------------
-      break; 
+      case 1: //---------------------
+        break; 
 
-    case 2: //---------------------
-      break;
-
+      case 2: //---------------------
+        break;
     }
     return 0;
   };
@@ -155,7 +167,7 @@ function Life(w, h)
   };
 
 
-  this.WhatIs = function(xin, yin) {
+  this.WhatIs = function(xin, yin) {  
     if ((xin >= this.w)||(yin >= this.h)||(xin < 0)||(yin < 0)) {
       return 0;
     }
@@ -193,7 +205,7 @@ function Life(w, h)
   // 2-dimensional grid of boxes.  It is also known as the "Moore Area"
   // in Cellular Automata.
   //
-/*  this.CountNeighbors = function(A, B)
+  this.CountNeighbors = function(A, B)
   {
       var map = NewNeighborhood(3);
 
@@ -205,7 +217,7 @@ function Life(w, h)
           map[value]++;
       }, this);
       return map;
-  };*/
+  };
   
   // NextGeneration advances the entire Life to the next generation.
   // Using the current grid, it calculates a new state and saves it 
@@ -261,15 +273,15 @@ function MakeNewMatrix(w, h)
 // RandomizeMatrix returns a matrix of integers between lowval and highval. 
 function MakeRandomMatrix(w, h, lowval, highval)
 {
-    var matrix = [];
-    for (var i = 0; i < w; i++) {
-        var col = [];
-        for (var j = 0; j < h; j++) {
-            col.push( Math.floor(100 * Math.random()) % 3);
-        }
-        matrix.push(col);
+  var matrix = [];
+  for (var i = 0; i < w; i++) {
+    var col = [];
+    for (var j = 0; j < h; j++) {
+      col.push(Math.floor(100 * Math.random()) % 3);
     }
-    return matrix;
+    matrix.push(col);
+  }
+  return matrix;
 }
 
 // Neighborhood returns a Map of Square Types -> how many there are.
@@ -329,8 +341,8 @@ window.onload = function () {
   canvas.height = canvasSize.y;
 
   var w = new World(ctx);
-  w.drawGridLines();
-  w.c.save();
+  //w.drawGridLines();
+  //w.c.save();
 
   var ToggleButton = document.getElementById("ButtonToggleCLI");
 
@@ -340,12 +352,6 @@ window.onload = function () {
   
   
   window.setInterval(function() {GameUpdate()}, GameTickRate);
-
-  function GameTick() 
-  {
-      GameUpdate();
-      TickCount++;
-  }
 
   function GameUpdate() 
   {
@@ -410,25 +416,23 @@ window.onload = function () {
   // When the mouse is pressed down, track the movements.
   canvas.addEventListener('mousedown', function(event)
   {
+    // Quick check to make sure you are on Player1 or Player 2.
+    switch (document.getElementById("ColorSelect").value) {
+        case '1': case '2': break;
+        default: return;
+    }
+    if (event == null) {
+        return;
+    }
 
-      // Quick check to make sure you are on Player1 or Player 2.
-      switch (document.getElementById("ColorSelect").value) {
-          case '1': case '2': break;
-          default: return;
-      }
-      if (event == null) {
-          return;
-      }
+    // Initialize variables for tracking boxes that mouse passes through.
+    lastX = -1;
+    lastY = -1;
+    userMousePathSet = new Set();
 
-      // Initialize variables for tracking boxes that mouse passes through.
-      lastX = -1;
-      lastY = -1;
-      userMousePathSet = new Set();
-
-      // Add the MouseMove event listener, which runs this function
-      // very frequently while the mouse moves across the canvas.
-      canvas.addEventListener('mousemove', HandleMouseMove, true);
-      
+    // Add the MouseMove event listener, which runs this function
+    // very frequently while the mouse moves across the canvas.
+    canvas.addEventListener('mousemove', HandleMouseMove, true);   
   });
 
   
@@ -483,23 +487,23 @@ window.onload = function () {
 
   function getNextLifeChange(x,y) 
   {
-      var newval;
-      switch (document.getElementById("ColorSelect").value) 
-      {
-          case '1': 
-              newval = 1;
-              color = PLAYER_1;
-              break;
+    var newval;
+    switch (document.getElementById("ColorSelect").value) 
+    {
+      case '1': 
+          newval = 1;
+          color = PLAYER_1;
+          break;
 
-          case '2': 
-              newval = 2; 
-              color = PLAYER_2;
-              break;
+      case '2': 
+          newval = 2; 
+          color = PLAYER_2;
+          break;
 
-          default:
-              return;
-      }
-      return { Value: newval, Location: {X: x, Y: y,} };
+      default:
+          return;
+    }
+    return { Value: newval, Location: {X: x, Y: y,} };
   }
 
   // Whenever the Canvas is clicked, boxes will be changed!
@@ -507,7 +511,7 @@ window.onload = function () {
   canvas.addEventListener('click', function(event) 
   {
       // Calculate the Box that the mouse has clicked on.
-      var pos = getMousePos(canvas, event)
+      var pos = getMousePos(canvas, event);
       var x = Math.floor(pos.x / gridBox.x);
       var y = Math.floor(pos.y / gridBox.y);
       var newval;
@@ -586,8 +590,10 @@ function World(context)
 
     this.reDraw = function() {
         var canvas = document.getElementById('MainCanvas');
-        this.c.clearRect(0, 0, canvas.width, canvas.height);
-        this.drawGridLines();
+        //this.c.clearRect(0, 0, canvas.width, canvas.height);
+        this.c.fillStyle = 'rgb(0, 0, 0)';
+        this.c.fillRect(0, 0, canvas.width, canvas.height);
+        //this.drawGridLines();
     };
 
     this.drawLine = function (x0, y0, xf, yf) {
@@ -598,7 +604,7 @@ function World(context)
     };
 
     this.drawGridLines = function() {
-        this.c.strokeStyle = '#FFF'
+        this.c.strokeStyle = '#AAA';
         for (var i = grid.size.x - 1; i >= 0; i--) {
             var x0 = i*gridBox.x;
             var xf = x0;
@@ -652,7 +658,7 @@ function World(context)
 // iterates through each one, and draws them on the screen.
 // TODO: use the KEY (which is the ID) to do something
 // TODO: add support for different TYPES of objects
-var DrawGameStateObjects = function() {
+/*var DrawGameStateObjects = function() {
     w.reDraw();
     DrawTreesFromBoolMatrix(w, MatrixOfTrees);
     Object.keys(ListOfObjects).forEach(function (key) {
@@ -666,12 +672,12 @@ var DrawGameStateObjects = function() {
         w.drawCharacterBox(A, B, gimmeColor(key));
     });
 };
-
+*/
 
 // Tries to return a number between 0 and 255.
 // Not really a PRNG, its just a cosine function.
 // Used for making colors that stay consistent with player id's.
-function simplePRNGbyte(n) 
+/*function simplePRNGbyte(n) 
 {
     return (Math.cos(n* 255)+1) * 255 >> 1;
 }
@@ -684,7 +690,7 @@ function gimmeColor(id)
     return 'rgb('+r+','+g+','+b+')';
 }
 
-
+*/
 
 function DrawColorsFromByteMatrix(world, matrix, w, h) 
 {
