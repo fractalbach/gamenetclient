@@ -57,7 +57,7 @@ var myLife = new Life(MAP_WIDTH, MAP_HEIGHT);
 // About the Game Timer 
 // Search for GameUpdate() to see the function that triggers.
 //
-var GameTickRate = 1000; // in milliseconds
+var GameTickRate = 500; // in milliseconds
 var TickCount = 0;
 
 
@@ -89,21 +89,18 @@ function Life(w, h)
   this.h = h;
   this.generation = 0;
   this.current = MakeRandomMatrix(w, h, 0, 1);
-  this.future = MakeNewMatrix(w, h);
-  /*
-    this.neighbors = [
-      Loc(-1, -1),
-      Loc(-1,  0),
-      Loc(-1,  1),
+  this.future = MakeNewMatrix(w, h);  
+  this.neighbors = [
+    Loc(-1, -1),
+    Loc(-1,  0),
+    Loc(-1,  1),
+    Loc( 0, -1),
+    Loc( 0,  1),
+    Loc( 1, -1),
+    Loc( 1,  0),
+    Loc( 1,  1),
+  ];
 
-      Loc( 0, -1),
-      Loc( 0,  1),
-
-      Loc( 1, -1),
-      Loc( 1,  0),
-      Loc( 1,  1),
-    ];
-  */
 
   //  ______________________________________________________________________
   // +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
@@ -120,32 +117,57 @@ function Life(w, h)
   this.GetNextCellValue = function(a, b) {
 
     var me = this.WhatIs(a, b); // The cell we are looking at.
+    var n = this.CountNeighbors(a, b);
 
     var S = this.WhatIs(a, b + 1); // South
     var N = this.WhatIs(a, (b - 1)); // North
-    var W = this.WhatIs((a - 1), b); // West
-    var E = this.WhatIs(a + 1, b); // East
-
+    //var W = this.WhatIs((a - 1), b); // West
+    //var E = this.WhatIs(a + 1, b); // East
+    var NE = this.WhatIs(a+1, b-1);
+    var NW = this.WhatIs(a-1, b-1);
+    var SE = this.WhatIs(a+1, b+1);
+    var SW = this.WhatIs(a-1, b+1);
+    
+    if (me == undefined) {return 0;}
+    if (me >= 6) {return 0;}
+    if (me >= 3) {return (me+1);}
         
     switch(me)
     {           
       case 0: //---------------------
 
-        if (N === 2) {return 2;} // Blue blocks drift Downward
-        if (S === 1) {return 1;} // Green blocks drift Upward
+        var p1 = 0;
+        var p2 = 0;
+
+        if (N === 2) {p2++;} // Blue blocks drift Downward
+        if (NW === 2) {p2++;}
+        if (NE === 2) {p2++;}
+
+        if (S === 1) {p1++;} // Green blocks drift Upward
+        if (SW === 1) {p1++;}
+        if (SE === 1) {p1++;}
+
+        if (p1 == p2) {return 0;}
+        if (p1 > p2) {return 1;}
+        if (p1 < p2) {return 2;}
+
         // if (E === 2) {return 2;} // Blue blocks drift to the Left
         // if (W === 1) {return 1;} // Green Blocks drift Right
-
         break; 
 
       case 1: //---------------------
-
+        if (n[2] >= 4) {return 2;}
         break; 
 
       case 2: //---------------------
+
+
+        if (n[1] >= 4) {return 1;}
         break;
     }
-    return 0;
+
+
+    return me;
   };
 
   //  ______________________________________________________________________
@@ -184,12 +206,9 @@ function Life(w, h)
   this.CountNeighbors = function(A, B)
   {
       var map = NewNeighborhood(3);
-
       this.neighbors.forEach( function (box) 
       {
-          var P = (A + box.x);
-          var Q = (B + box.y);
-          var value = this.WhatIs(P, Q);
+          var value = this.WhatIs(A + box.x, B + box.x);
           map[value]++;
       }, this);
       return map;
@@ -214,7 +233,20 @@ function Life(w, h)
       this.generation++;
       return this.generation;
   };
-};
+
+
+  // DropLaBomba will immediately alter a bunch of squares.
+  // BOOOOOM!
+  this.DropLaBomba = function(x, y) 
+  {
+    for (var i = -2; i <= 2; i++) {
+      for (var j = -2; j <= 2; j++) {
+        this.ChangeValue(x+i, y+j, 3);
+      }
+    }
+  };
+
+}; // End of Definition of Life Object.
 
 // __________________________________________________________________________
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -228,11 +260,16 @@ var Vec = function (A,B) {
   this.x = parseInt(A);
   this.y = parseInt(B);
 };
-
-function Loc(A,B) {
-    return {x: A, y: B};
-};
 */
+
+function Loc(A,B)
+{
+  return {
+    x: A,
+    y: B,
+  }
+};
+
 
 // MakeNewMatrix initializes a matrix of zeros. Size = (w * h).
 function MakeNewMatrix(w, h) 
@@ -516,13 +553,10 @@ window.onload = function () {
               color = PLAYER_2;
               break;
 
-          case 'bomba1': 
-              //DropLaBomba(x, y, 1);
-              color = "#FFF";
-              break;
-
+          case 'bomba1':
           case 'bomba2': 
-              //DropLaBomba(x, y, 2);
+              newval = 4;
+              myLife.DropLaBomba(x, y);
               color = "#FFF";
               break;
 
@@ -625,6 +659,29 @@ function World(context)
     };
 };
 
+function DrawColorsFromByteMatrix(world, matrix, w, h) 
+{
+  var x;
+  for (var i = 0; i < w; i++) {
+    for (var j = 0; j < h; j++) {
+      switch (matrix[i][j]) {
+      case 0: x = EMPTY_SQUARE; break;
+      case 1: x = PLAYER_1; break;
+      case 2: x = PLAYER_2; break;
+      case 3: x = SQUARE_3; break;
+      case 4: x = SQUARE_4; break;
+      case 5: x = SQUARE_5; break;
+      case 6: x = SQUARE_6; break;
+      case 7: x = SQUARE_7; break;
+      default: x = UNKNOWN_SQUARE; break;
+      }
+      world.drawCharacterBox(i, j, x);
+    }
+  }
+}
+
+
+
 // __________________________________________________________________________
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                        Canvas Drawing Events
@@ -669,27 +726,6 @@ function gimmeColor(id)
 }
 
 */
-
-function DrawColorsFromByteMatrix(world, matrix, w, h) 
-{
-  var x;
-  for (var i = 0; i < w; i++) {
-    for (var j = 0; j < h; j++) {
-      switch (matrix[i][j]) {
-      case 0: x = EMPTY_SQUARE; break;
-      case 1: x = PLAYER_1; break;
-      case 2: x = PLAYER_2; break;
-      case 3: x = SQUARE_3; break;
-      case 4: x = SQUARE_4; break;
-      case 5: x = SQUARE_5; break;
-      case 6: x = SQUARE_6; break;
-      case 7: x = SQUARE_7; break;
-      default: x = UNKNOWN_SQUARE; break;
-      }
-      world.drawCharacterBox(i, j, x);
-    }
-  }
-}
 
 
 
