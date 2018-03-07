@@ -126,17 +126,20 @@ function Life(w, h)
     var W = this.WhatIs((a - 1), b); // West
     var E = this.WhatIs(a + 1, b); // East
 
+        
     switch(me)
     {           
       case 0: //---------------------
 
-        // if (E === 2) {return 2;} // Blue blocks drift to the Left
-        // if (W === 1) {return 1;} // Green Blocks drift Right
         if (N === 2) {return 2;} // Blue blocks drift Downward
         if (S === 1) {return 1;} // Green blocks drift Upward
+        // if (E === 2) {return 2;} // Blue blocks drift to the Left
+        // if (W === 1) {return 1;} // Green Blocks drift Right
+
         break; 
 
       case 1: //---------------------
+
         break; 
 
       case 2: //---------------------
@@ -155,10 +158,14 @@ function Life(w, h)
   // on the grid.  Should probably use this if you are clicking stuff.
   //
   this.ChangeValue = function(x, y, newval) {  
-      this.current[x][y] = newval;
-      return;
+    this.current[x][y] = newval;
+    return;
   };
 
+  this.ChangeFuture = function(x, y, newval) {
+    this.future[x][y] = newval;
+    return;
+  };
 
   this.WhatIs = function(xin, yin) {  
     if ((xin >= this.w) || (yin >= this.h) ||  (xin < 0) || (yin < 0)) {
@@ -194,12 +201,14 @@ function Life(w, h)
   // grid replaces the current, and the generation number increases by 1.  
   //
   this.NextGeneration = function() {
+      this.future = MakeNewMatrix(this.w, this.h);
       var maxI = this.w;
       var maxJ = this.h;
-      for (var iz = 0; iz < maxI; iz++) {
-          for (var jz = 0; jz < maxJ; jz++) {
-              this.future[iz][jz] =  this.GetNextCellValue(iz, jz);
-          }
+      for (var i = 0; i < maxI; i++) {
+        for (var j = 0; j < maxJ; j++) {
+          var newval = this.GetNextCellValue(i, j);
+          this.ChangeFuture(i, j, newval)
+        }
       }
       this.current = this.future;
       this.generation++;
