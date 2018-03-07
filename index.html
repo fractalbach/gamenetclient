@@ -30,11 +30,11 @@
 // Colors of the Various Types of Squares
 var PLAYER_1 = "#030";
 var PLAYER_2 = "#49F";
-var SQUARE_3 = "#F00";
-var SQUARE_4 = "#D10";
-var SQUARE_5 = "#B20";
-var SQUARE_6 = "#920";
-var SQUARE_7 = "#820";
+var SQUARE_3 = "#B00";
+var SQUARE_4 = "#C22";
+var SQUARE_5 = "#D44";
+var SQUARE_6 = "#E66";
+var SQUARE_7 = "#F88";
 var EMPTY_SQUARE = "#AAA"
 var UNKNOWN_SQUARE = "#A55";
 
@@ -89,7 +89,9 @@ function Life(w, h)
   this.h = h;
   this.generation = 0;
   this.current = MakeRandomMatrix(w, h, 0, 1);
-  this.future = MakeNewMatrix(w, h);  
+  this.future = MakeNewMatrix(w, h);
+  this.numBlues = 0;
+  this.numGreens = 0;  
   this.neighbors = [
     Loc(-1, -1),
     Loc(-1,  0),
@@ -121,15 +123,15 @@ function Life(w, h)
 
     var S = this.WhatIs(a, b + 1); // South
     var N = this.WhatIs(a, (b - 1)); // North
-    //var W = this.WhatIs((a - 1), b); // West
-    //var E = this.WhatIs(a + 1, b); // East
+    var W = this.WhatIs((a - 1), b); // West
+    var E = this.WhatIs(a + 1, b); // East
     var NE = this.WhatIs(a+1, b-1);
     var NW = this.WhatIs(a-1, b-1);
     var SE = this.WhatIs(a+1, b+1);
     var SW = this.WhatIs(a-1, b+1);
     
     if (me == undefined) {return 0;}
-    if (me >= 6) {return 0;}
+    if (me >= 7) {return 0;}
     if (me >= 3) {return (me+1);}
         
     switch(me)
@@ -147,7 +149,18 @@ function Life(w, h)
         if (SW === 1) {p1++;}
         if (SE === 1) {p1++;}
 
-        if (p1 == p2) {return 0;}
+        switch(W)
+        {
+          case 1: p1++;
+          case 2: p2++;
+        }
+        switch(E)
+        {
+          case 1: p1++;
+          case 2: p2++;
+        }
+
+        if (p1 == p2) {return 7;}
         if (p1 > p2) {return 1;}
         if (p1 < p2) {return 2;}
 
@@ -179,16 +192,29 @@ function Life(w, h)
   // ChangeValue is a helper function for directly changing a value 
   // on the grid.  Should probably use this if you are clicking stuff.
   //
-  this.ChangeValue = function(x, y, newval) {  
+  this.ChangeValue = function(x, y, newval) 
+  {
+    if ((x >= this.w) || (y >= this.h) || (x < 0) || (y < 0)) {
+      return;
+    }
     this.current[x][y] = newval;
     return;
   };
 
-  this.ChangeFuture = function(x, y, newval) {
+  // ChangeFuture is a setter function that can be passed invalid locations.
+  // The function will simply do nothing if the location is out of bounds. 
+  this.ChangeFuture = function(x, y, newval) 
+  {
+    if ((x >= this.w) || (y >= this.h) || (x < 0) || (y < 0)) {
+      return;
+    }
     this.future[x][y] = newval;
     return;
   };
 
+  // WhatIs is a getter function that returns the value at the given location.
+  // Returns 0 if passed an invalid function.
+  // Instead 
   this.WhatIs = function(xin, yin) {  
     if ((xin >= this.w) || (yin >= this.h) ||  (xin < 0) || (yin < 0)) {
       return 0;
@@ -219,31 +245,55 @@ function Life(w, h)
   // into the future grid.  At the end of the calculation, the future 
   // grid replaces the current, and the generation number increases by 1.  
   //
-  this.NextGeneration = function() {
-      this.future = MakeNewMatrix(this.w, this.h);
-      var maxI = this.w;
-      var maxJ = this.h;
-      for (var i = 0; i < maxI; i++) {
-        for (var j = 0; j < maxJ; j++) {
-          var newval = this.GetNextCellValue(i, j);
-          this.ChangeFuture(i, j, newval)
-        }
+  this.NextGeneration = function() 
+  {
+    this.future = MakeNewMatrix(this.w, this.h);
+    this.ResetColorCount();
+    var maxI = this.w;
+    var maxJ = this.h;
+    for (var i = 0; i < maxI; i++) {
+      for (var j = 0; j < maxJ; j++) {
+        var newval = this.GetNextCellValue(i, j);
+        this.ChangeFuture(i, j, newval);
+        this.AddColorCount(newval);
       }
-      this.current = this.future;
-      this.generation++;
-      return this.generation;
+    }
+    this.current = this.future;
+    this.generation++;
+    return this.generation;
   };
 
 
   // DropLaBomba will immediately alter a bunch of squares.
   // BOOOOOM!
-  this.DropLaBomba = function(x, y) 
+  this.DropLaBomba = function(x, y)
   {
     for (var i = -2; i <= 2; i++) {
       for (var j = -2; j <= 2; j++) {
+        if ((Math.abs(i) === 2) && (Math.abs(j) === 2)) {
+          continue;
+        }
         this.ChangeValue(x+i, y+j, 3);
       }
     }
+  };
+
+
+  this.AddColorCount = function(val)
+  {
+    switch(val)
+    {
+      case 1: this.numGreens++;
+      case 2: this.numBlues++;
+      default: return false;
+    }
+    return true;
+  };
+
+  this.ResetColorCount = function()
+  {
+    this.numBlues = 0;
+    this.numGreens = 0;
   };
 
 }; // End of Definition of Life Object.
@@ -365,14 +415,28 @@ window.onload = function () {
   //                           Game Timer 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-  
-  window.setInterval(function() {GameUpdate()}, GameTickRate);
-
-  function GameUpdate() 
+  function sleep(ms) 
   {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function GameUpdate() 
+  {
+    while (true) 
+    {
       myLife.NextGeneration();
       DrawColorsFromByteMatrix(w, myLife.current, MAP_WIDTH, MAP_HEIGHT);
+      document.getElementById("InfoBar_Generation").innerHTML = myLife.generation;
+      document.getElementById("InfoCountBlues").innerHTML = myLife.numBlues;
+      document.getElementById("InfoCountGreens").innerHTML = myLife.numGreens;
+      await sleep(GameTickRate);
+    }
   }
+
+  GameUpdate();
+
+    //window.setTimeout(function() {GameUpdate()}, GameTickRate);
+
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   //                        Utility Functions
@@ -398,8 +462,15 @@ window.onload = function () {
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   //                      Canvas Event Listeners 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  //                      Dragging the Mouse 
+  //                  (Disabled in Game of War)
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Create an array to store the mouse locations the mouse is dragged 
   // across the screen.
+  /*
   var userMousePathSet = new Set();
   var lastX;
   var lastY;
@@ -494,12 +565,12 @@ window.onload = function () {
       userMousePathSet = new Set();
   });
 
-
+*/
 
   //                                 ~ | ~
   //    |------------------------------+------------------------------| 
   //                                 ~ | ~
-
+/*
   function getNextLifeChange(x,y) 
   {
     var newval;
@@ -520,6 +591,11 @@ window.onload = function () {
     }
     return { Value: newval, Location: {X: x, Y: y,} };
   }
+*/
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  //                      Canvas Mouse Click 
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   // Whenever the Canvas is clicked, boxes will be changed!
   // TODO: Only send a message to the server if websocket connection = true
@@ -529,41 +605,49 @@ window.onload = function () {
       var pos = getMousePos(canvas, event);
       var x = Math.floor(pos.x / gridBox.x);
       var y = Math.floor(pos.y / gridBox.y);
-      var newval;
-      myLife.ChangeValue(x, y, UserScribblesAt(x,y));
-      if (ToggleButton.tabIndex == 1) {ToggleButton.tabIndex = 0;}
+
+
+      myLife.DropLaBomba(x, y);
+      w.drawCharacterBox(x, y, 'white');
+      myLife.ChangeValue(x, y, 4);
+
+      //var newval;
+      // myLife.ChangeValue(x, y, UserScribblesAt(x,y));
+      // if (ToggleButton.tabIndex == 1) {ToggleButton.tabIndex = 0;}
   });
 
-  // ad;fkjasd;fkajsd;fkajsd;fklasdfj;kasdfj;asdlkf
-  var UserScribblesAt  = function(x, y) {
-      var oldval = document.getElementById("ColorSelect").value;
-      var newval;
-      var color;
-     switch (oldval) 
-      {
-          case '1': 
-              //LifeChange(x, y, 1);
-              newval = 1;
-              color = PLAYER_1;
-              break;
+  // Stuff that happens when the user "clicks" a square.
 
-          case '2': 
-              //LifeChange(x, y, 2);
-              newval = 2; 
-              color = PLAYER_2;
-              break;
+  var UserScribblesAt  = function(x, y) 
+  {
+    var oldval = document.getElementById("ColorSelect").value;
+    var newval;
+    var color;
+    switch (oldval) 
+    {
+        case '1': 
+            //LifeChange(x, y, 1);
+            newval = 1;
+            color = PLAYER_1;
+            break;
 
-          case 'bomba1':
-          case 'bomba2': 
-              newval = 4;
-              myLife.DropLaBomba(x, y);
-              color = "#FFF";
-              break;
+        case '2': 
+            //LifeChange(x, y, 2);
+            newval = 2; 
+            color = PLAYER_2;
+            break;
 
-          default: return;
-      }
-      w.drawCharacterBox(x, y, color);
-      return newval;
+        case 'bomba1':
+        case 'bomba2': 
+            newval = 4;
+            myLife.DropLaBomba(x, y);
+            color = "#FFF";
+            break;
+
+        default: return;
+    }
+    w.drawCharacterBox(x, y, color);
+    return newval;
   };
 }
 
@@ -1010,6 +1094,7 @@ function snowflake(c, n, x, y, len) {
                 display: block;
                 margin: 0 auto;
                 background: #333;
+                resize: all;
             }
 
             .message {
@@ -1043,15 +1128,6 @@ function snowflake(c, n, x, y, len) {
                 color: white;
             }
 
-            #ButtonToggleCLI {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: black;
-                height: calc(2em + 2px);
-                vertical-align: middle;
-            }
 
             #ButtonToggleCLI:hover {
                 background: #805;
@@ -1069,13 +1145,43 @@ function snowflake(c, n, x, y, len) {
                 background: #095;
             }
 
+            #InfoBar {
+                position: fixed;
+
+                overflow-y: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: #000;
+                height: calc(2em + 2px);
+                vertical-align: middle;
+                text-align: center;
+                user-select: none;
+            }
+            #InfoBarText,
             #ButtonToggleText {
+                padding: 0 1em;
                 user-select: none;
                 line-height: calc(2em);
-                border: 1px solid white;
                 text-align: center;
                 color: white;
+                white-space: nowrap;
             }
+            #InfoBar_Generation,
+            #InfoCountBlues,
+            #InfoCountGreens {
+              font-family: monospace;
+              display: inline-block;
+              width: 5ch;
+            }
+            #InfoCountGreens {
+              color: #9F9;
+            }
+
+            #InfoCountBlues {
+              color: #9AF;
+            }
+
 
             #ColorSelect {
                 position: fixed;
@@ -1097,6 +1203,7 @@ function snowflake(c, n, x, y, len) {
                     </div>
                 </div>
             </div>
+<!-- 
             <div id="ColorSelectWrap">
                 <select id="ColorSelect">
                     <option value="1">Player 1</option>
@@ -1105,7 +1212,9 @@ function snowflake(c, n, x, y, len) {
                     <option value="bomba2">💣 Player 2 - La Bomba 💣</option>
                 </select>
             </div>
+ -->            
         </div>
+<!--         
         <div id="MessageWrap" class="invisible">
             <form id="commandForm">
                 <input id="ButtonSendCommand" type="submit" value="Send"/>
@@ -1122,15 +1231,26 @@ function snowflake(c, n, x, y, len) {
             <div id="LogWrap">
                 <div id="log"></div>
             </div>
-            <!-- 
+ 
+            
     <form id="form">
         <input id="ButtonPlainSend" type="submit" value="Send" />
         <input type="text" id="msg" size="64" autocomplete="off" />
     </form>
- -->
+ 
         </div>
         <div id="ButtonToggleCLI" tabindex="1" role="button">
             <div id="ButtonToggleText">↕   Chat Room   ↕</div>
         </div>
+-->
+        
+        <div id="InfoBar">
+          <div id="InfoBarText">
+            ~~ Generation:( <span id="InfoBar_Generation">0</span> ) ~~
+            Blues:( <span id="InfoCountBlues">0</span> ) ~~
+            Greens:( <span id="InfoCountGreens">0</span> ) ~~ 
+          </div>
+        </div>
+
     </body>
 </html>
