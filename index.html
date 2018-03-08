@@ -28,7 +28,7 @@
 //                                 ~ | ~
 
 // Colors of the Various Types of Squares
-var PLAYER_1 = "#030";
+var PLAYER_1 = "#050";
 var PLAYER_2 = "#49F";
 var SQUARE_3 = "#B00";
 var SQUARE_4 = "#C22";
@@ -90,8 +90,9 @@ function Life(w, h)
   this.generation = 0;
   this.current = MakeRandomMatrix(w, h, 0, 1);
   this.future = MakeNewMatrix(w, h);
+  this.numDisputed = 0;
+  this.numGreens = 0;
   this.numBlues = 0;
-  this.numGreens = 0;  
   this.neighbors = [
     Loc(-1, -1),
     Loc(-1,  0),
@@ -283,17 +284,17 @@ function Life(w, h)
   {
     switch(val)
     {
-      case 1: this.numGreens++;
-      case 2: this.numBlues++;
-      default: return false;
+      case 1: this.numGreens++; break;
+      case 2: this.numBlues++; break;
+      default: this.numDisputed++; break;
     }
-    return true;
   };
 
   this.ResetColorCount = function()
   {
     this.numBlues = 0;
     this.numGreens = 0;
+    this.numDisputed = 0;
   };
 
 }; // End of Definition of Life Object.
@@ -429,6 +430,7 @@ window.onload = function () {
       document.getElementById("InfoBar_Generation").innerHTML = myLife.generation;
       document.getElementById("InfoCountBlues").innerHTML = myLife.numBlues;
       document.getElementById("InfoCountGreens").innerHTML = myLife.numGreens;
+      document.getElementById("InfoCountDisputes").innerHTML = myLife.numDisputed;
       await sleep(GameTickRate);
     }
   }
@@ -618,7 +620,7 @@ window.onload = function () {
 
   // Stuff that happens when the user "clicks" a square.
 
-  var UserScribblesAt  = function(x, y) 
+  var UserScribblesAt = function(x, y) 
   {
     var oldval = document.getElementById("ColorSelect").value;
     var newval;
@@ -1148,7 +1150,6 @@ function snowflake(c, n, x, y, len) {
             #InfoBar {
                 position: fixed;
 
-                overflow-y: auto;
                 bottom: 0;
                 left: 0;
                 right: 0;
@@ -1160,6 +1161,7 @@ function snowflake(c, n, x, y, len) {
             }
             #InfoBarText,
             #ButtonToggleText {
+                overflow-x: auto;
                 padding: 0 1em;
                 user-select: none;
                 line-height: calc(2em);
@@ -1168,11 +1170,12 @@ function snowflake(c, n, x, y, len) {
                 white-space: nowrap;
             }
             #InfoBar_Generation,
+            #InfoCountDisputes,
             #InfoCountBlues,
             #InfoCountGreens {
               font-family: monospace;
               display: inline-block;
-              width: 5ch;
+              width: 4ch;
             }
             #InfoCountGreens {
               color: #9F9;
@@ -1180,6 +1183,9 @@ function snowflake(c, n, x, y, len) {
 
             #InfoCountBlues {
               color: #9AF;
+            }
+            #InfoCountDisputes {
+              color: #FAA;
             }
 
 
@@ -1249,6 +1255,7 @@ function snowflake(c, n, x, y, len) {
             ~~ Generation:( <span id="InfoBar_Generation">0</span> ) ~~
             Blues:( <span id="InfoCountBlues">0</span> ) ~~
             Greens:( <span id="InfoCountGreens">0</span> ) ~~ 
+            Disputed:( <span id="InfoCountDisputes">0</span> ) ~~
           </div>
         </div>
 
