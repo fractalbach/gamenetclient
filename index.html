@@ -28,21 +28,23 @@
 //                                 ~ | ~
 
 // Colors of the Various Types of Squares
-var PLAYER_1 = "#050";
-var PLAYER_2 = "#49F";
+var PLAYER_1 = "#0B0";
+var PLAYER_2 = "#44F";
 var SQUARE_3 = "#B00";
 var SQUARE_4 = "#C22";
 var SQUARE_5 = "#D44";
 var SQUARE_6 = "#E66";
 var SQUARE_7 = "#F88";
-var EMPTY_SQUARE = "#AAA"
+var EMPTY_SQUARE = "#AAA";
 var UNKNOWN_SQUARE = "#A55";
 
 
 // Dimensions of the Map and the Canvas Grid
-var MAP_WIDTH = 48; 
-var MAP_HEIGHT = 48;
-var canvasSize = {x: 1248, y: 1248};
+var MAP_WIDTH = 24; 
+var MAP_HEIGHT = 24;
+//var canvasSize = {x: 1248, y: 1248};
+// var canvasSize = {x: 624, y: 624};
+var canvasSize = {x: 960, y: 960};
 var grid = {size: {x: MAP_WIDTH, y: MAP_HEIGHT}};
 var gridBox = {
   x: canvasSize.x / MAP_WIDTH, 
@@ -61,9 +63,18 @@ var GameTickRate = 500; // in milliseconds
 var TickCount = 0;
 
 
+// The Generation Number # when the player input stops, and the game ends.
+var GAME_ENDS_GEN = 50;
+var Round = 0;
+var gameHasEnded = false;
 
 
-
+function Game()
+{
+  this.MapWidth;
+  this.MapHeight;
+  this.Life;
+}
 
 
 
@@ -179,8 +190,6 @@ function Life(w, h)
         if (n[1] >= 4) {return 1;}
         break;
     }
-
-
     return me;
   };
 
@@ -297,6 +306,16 @@ function Life(w, h)
     this.numDisputed = 0;
   };
 
+  this.ResetLife = function()
+  {
+    this.generation = 0;
+    this.current = MakeRandomMatrix(w, h, 0, 1);
+    this.future = MakeNewMatrix(w, h);
+    this.numDisputed = 0;
+    this.numGreens = 0;
+    this.numBlues = 0;
+  };
+
 }; // End of Definition of Life Object.
 
 // __________________________________________________________________________
@@ -388,6 +407,7 @@ function gridUnHash(hash)
 // __________________________________________________________________________
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 window.onload = function () {
 // asdf
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -413,31 +433,176 @@ window.onload = function () {
   var ToggleButton = document.getElementById("ButtonToggleCLI");
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  //                           Game Timer 
+  //                      Game Update - Next Gen 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
-  function sleep(ms) 
-  {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+    
 
-  async function GameUpdate() 
-  {
-    while (true) 
+    function UserDoesGameUpdate()
     {
+      if (gameHasEnded == true) {
+        return;
+      }
+      if (myLife.generation >= GAME_ENDS_GEN) {
+        gameHasEnded = true;
+        GameEnd();
+        return;
+      }
+      GameUpdate();
+      TurnTracker.ChangeTurns();
+      var RoundsLeft = Math.floor((GAME_ENDS_GEN - myLife.generation) / numberOfPlayers);
+      document.getElementById('DisplayRoundsLeft').innerHTML = RoundsLeft; 
+      return;
+    }
+
+  function GameUpdate() 
+  {
       myLife.NextGeneration();
       DrawColorsFromByteMatrix(w, myLife.current, MAP_WIDTH, MAP_HEIGHT);
       document.getElementById("InfoBar_Generation").innerHTML = myLife.generation;
       document.getElementById("InfoCountBlues").innerHTML = myLife.numBlues;
       document.getElementById("InfoCountGreens").innerHTML = myLife.numGreens;
       document.getElementById("InfoCountDisputes").innerHTML = myLife.numDisputed;
+  }
+
+  function MultipleGameUpdates(numberOfUpdates)
+  {
+    for (var i=0; i<numberOfUpdates; i++) 
+    {
+      GameUpdate();
+    }
+  }
+
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  //                   Start, End, and Restart the Game 
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+
+  function RestartGame()
+  {
+    myLife.ResetLife();
+    gameHasEnded = false;
+    document.getElementById("DisplayEndGame").className = "invisible";
+    document.getElementById("DisplayTurn").className = "visible";
+    GameStartUp();
+  }
+
+  // Run A few Primary GameUpdates to get things started.
+  function GameStartUp()
+  {
+    MultipleGameUpdates(5);
+    myLife.generation = 1;
+    document.getElementById("InfoBar_Generation").innerHTML = myLife.generation;
+  }
+  GameStartUp();
+
+  // Sequence of events that happen when the game ends.
+  // This should be triggered once the Generation Update reaches a certain
+  // number. 
+  function GameEnd()
+  {
+    MultipleGameUpdates(10);
+    document.getElementById("DisplayTurn").className = "invisible";
+    document.getElementById("DisplayEndGame").className = "visible";
+    var winner; 
+    var color;
+    if (myLife.numBlues === myLife.numGreens) {
+      winner = "Tie!";
+      color = "grayText";
+    }
+    if (myLife.numBlues < myLife.numGreens) {
+      winner = "Player 1 has won!";
+      color = "greenText";
+    }
+    if (myLife.numBlues > myLife.numGreens) {
+      winner = "Player 2 has won!";
+      color = "blueText";
+    }
+    document.getElementById("DisplayEndGameWinner").innerHTML = winner;
+    if (color != false) {
+      document.getElementById("DisplayEndGameWinner").className = color;  
+    }
+    
+  }
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  //                           Game Timer 
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  // This Would start the Game Ticker, which continuously updates the 
+  // game.  But if we want a turn-based game, then we disable it.
+  //
+  // RunGameTicker();
+  //
+
+
+  function sleep(ms) 
+  {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function RunGameTicker() 
+  {
+    while (true) 
+    {
+      GameUpdate();
       await sleep(GameTickRate);
     }
   }
 
-  GameUpdate();
+  //window.setTimeout(function() {GameUpdate()}, GameTickRate);
 
-    //window.setTimeout(function() {GameUpdate()}, GameTickRate);
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  //                         Player's Turns
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  // Start up the Turn Tracker, which will keep track of whose turn it 
+  // is during the game.
+  //
+  var TurnTracker = new PlayerTurnObject();
+
+  // PlayerTurnObject holds the current turn by player number,
+  // and has a function that will change turns back and forth between
+  // 2 players when ChangeTurns() is called.
+  //
+  function PlayerTurnObject()
+  {
+    this.player = 1;
+    this.ChangeTurns = function()
+    {
+      if (this.player === 1) {
+        this.player = 2;
+        ChangeTurnsDisplay(2);
+      } else {
+        this.player = 1;
+        ChangeTurnsDisplay(1);
+      }      
+    }
+  }
+
+  // ChangeTurnsDisplay accepts 1 or 2, and will change the element
+  // within the HTML document to a certain color and number to reflect
+  // the current player's turn.
+  // 
+  var numberOfPlayers = 2
+
+  function ChangeTurnsDisplay(playerNum)
+  {
+    switch (playerNum)
+    {
+      case 1:
+        document.getElementById('DisplayTurnPlayerColor').className = "greenText";
+        document.getElementById('DisplayTurnPlayerNumber').innerHTML = playerNum;
+        break;
+      case 2:
+        document.getElementById('DisplayTurnPlayerColor').className = "purpleText";
+        document.getElementById('DisplayTurnPlayerNumber').innerHTML = playerNum;
+        break;
+    }
+  }
+
+
+    
 
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -603,6 +768,10 @@ window.onload = function () {
   // TODO: Only send a message to the server if websocket connection = true
   canvas.addEventListener('click', function(event) 
   {
+      if (gameHasEnded == true)
+      {
+        return;
+      }
       // Calculate the Box that the mouse has clicked on.
       var pos = getMousePos(canvas, event);
       var x = Math.floor(pos.x / gridBox.x);
@@ -612,6 +781,8 @@ window.onload = function () {
       myLife.DropLaBomba(x, y);
       w.drawCharacterBox(x, y, 'white');
       myLife.ChangeValue(x, y, 4);
+
+      UserDoesGameUpdate();
 
       //var newval;
       // myLife.ChangeValue(x, y, UserScribblesAt(x,y));
@@ -651,7 +822,17 @@ window.onload = function () {
     w.drawCharacterBox(x, y, color);
     return newval;
   };
+
+  document.getElementById("ButtonStartGame").addEventListener("click", function(event) 
+  {
+    document.getElementById("Instructions").className = "invisible";
+    document.getElementById("DisplayTurn").className = "visible";
+  });
+
+  document.getElementById('ButtonPlayAgain').addEventListener("click", RestartGame, true);
+
 }
+
 
 
     
@@ -745,7 +926,7 @@ function World(context)
     };
 };
 
-function DrawColorsFromByteMatrix(world, matrix, w, h) 
+function DrawColorsFromByteMatrix(world, matrix, w, h)
 {
   var x;
   for (var i = 0; i < w; i++) {
@@ -1039,7 +1220,6 @@ function snowflake(c, n, x, y, len) {
             html {
                 overflow: hidden;
             }
-
             body {
                 position: fixed;
                 padding: 0;
@@ -1048,15 +1228,33 @@ function snowflake(c, n, x, y, len) {
                 height: 100%;
                 background: #522;
             }
-
             .visible {
                 display: all;
             }
-
             .invisible {
                 display: none;
             }
-
+            .greenText {
+              color: #6C6;
+            }
+            .blueText {
+              color: #88F;
+            }
+            .purpleText {
+              color: #88F;
+            }
+            .redText {
+              color: #F33;
+            }
+            .pinkText {
+              color: pink;
+            }
+            .grayText {
+              color: #AAA;
+            }
+            #GameWrap {
+              z-index: 5;
+            }
             #MessageWrap {
                 height: calc(100% - 2em);
                 position: fixed;
@@ -1065,11 +1263,9 @@ function snowflake(c, n, x, y, len) {
                 top: 0 ;
                 background: #000;
             }
-
             #LogWrap {
                 height: calc(100% - 2em);
             }
-
             #CanvasWrap {
                 position: fixed;
                 display: block;
@@ -1079,7 +1275,6 @@ function snowflake(c, n, x, y, len) {
                 right: 0;
                 overflow: hidden;
             }
-
             #CanvasArea {
                 display: block;
                 max-width: 100%;
@@ -1087,9 +1282,8 @@ function snowflake(c, n, x, y, len) {
                 background: #555;
                 overflow: auto;
             }
-
             #CanvasBorder {
-                border: solid 2px;
+                border: solid 2px white;
             }
 
             #MainCanvas {
@@ -1098,12 +1292,10 @@ function snowflake(c, n, x, y, len) {
                 background: #333;
                 resize: all;
             }
-
             .message {
                 margin: 0.1em 0;
                 padding: 0.1em 0.5em;
             }
-
             #log {
                 height: 100%;
                 color: #0C0;
@@ -1111,30 +1303,23 @@ function snowflake(c, n, x, y, len) {
                 font-family: monospace;
                 white-space: nowrap;
             }
-
             #commandForm {
                 display: flex;
                 flex-direction: row;
                 height: 2em;
             }
-
             #commandTextInput {
                 flex: 1;
             }
-
             #msg {
                 width: 80%;
             }
-
             .personal {
                 color: white;
             }
-
-
             #ButtonToggleCLI:hover {
                 background: #805;
             }
-
             select:focus, input:focus {
                 background: #cef;
             }
@@ -1182,82 +1367,136 @@ function snowflake(c, n, x, y, len) {
             }
 
             #InfoCountBlues {
-              color: #9AF;
+              color: #77F;
             }
             #InfoCountDisputes {
               color: #FAA;
             }
-
-
             #ColorSelect {
                 position: fixed;
                 width: 20em;
                 height: 3em;
             }
-
+            #DisplayTurn {
+              top: 0;
+              left: calc(50% - 10em);
+              right: calc(50% - 10em);
+              width: 20em;
+              background: rgba(0, 0, 0, 0.7);
+              position: fixed;
+              line-height: 2em;
+              color: white;
+              text-align: center;
+              pointer-events: none;
+              user-select: none;
+              z-index: 3;
+            }
+            #DisplayTurnPlayerNumber {
+              font-family: monospace;
+              width: 1ch;
+            }
+            #DisplayRoundsLeft {
+              font-family: monospace;
+              width: 2ch;
+            }
+            #DisplayEndGame {
+              z-index: 1;
+              border: 1px solid gray;
+              text-align: center;
+              padding: 2px;
+              overflow: auto;
+              position: fixed;
+              top: calc(50% - 7em);
+              bottom: calc(50% - 5em);
+              right: calc(50% - 10em);
+              left: calc(50% - 10em);
+              background: rgba(0, 0, 0, 0.6);
+              color: white;
+              box-shadow: 0px 0px 10px 1px;
+            }
+            #Instructions {
+              z-index: 1;
+              border: 2px solid white;
+              text-align: center;
+              padding: 2px;
+              overflow: auto;
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 2em;
+              background: rgba(0, 0, 0, 0.9);
+              color: white;
+            }
+            #InstructionsTextWrap {
+              max-width: 40em;
+              margin: auto;
+            }
+            #ButtonStartGame {
+              font-size: 200%;
+            }
+            h2 {
+              border-bottom: 1px solid white;
+              display: inline-block;
+              margin-bottom: 0em;
+            }
             option {
                 height: 2em;
             }
         </style>
-    </head>
-    <body id="theBody">
-        <div id="GameWrap">
-            <div id="CanvasWrap">
-                <div id="CanvasArea">
-                    <div id="CanvasBorder">
-                        <canvas id="MainCanvas" width="1248" height="1248"></canvas>
-                    </div>
-                </div>
-            </div>
-<!-- 
-            <div id="ColorSelectWrap">
-                <select id="ColorSelect">
-                    <option value="1">Player 1</option>
-                    <option value="bomba1">💣 Player 1 - La Bomba 💣</option>
-                    <option value="2">Player 2</option>
-                    <option value="bomba2">💣 Player 2 - La Bomba 💣</option>
-                </select>
-            </div>
- -->            
-        </div>
-<!--         
-        <div id="MessageWrap" class="invisible">
-            <form id="commandForm">
-                <input id="ButtonSendCommand" type="submit" value="Send"/>
-                <select id="commandTypeMenuInput">
-                    <option value="chat">Chat</option>
-                    <option value="move">Move</option>
-                    <option value="create">Create</option>
-                    <option value="delete">Delete</option>
-                    <option value="logout">Login</option>
-                    <option value="logout">Logout</option>
-                </select>
-                <input type="text" id="commandTextInput" size="64" autocomplete="off"/>
-            </form>
-            <div id="LogWrap">
-                <div id="log"></div>
-            </div>
- 
-            
-    <form id="form">
-        <input id="ButtonPlainSend" type="submit" value="Send" />
-        <input type="text" id="msg" size="64" autocomplete="off" />
-    </form>
- 
-        </div>
-        <div id="ButtonToggleCLI" tabindex="1" role="button">
-            <div id="ButtonToggleText">↕   Chat Room   ↕</div>
-        </div>
--->
-        
-        <div id="InfoBar">
-          <div id="InfoBarText">
-            ~~ Generation:( <span id="InfoBar_Generation">0</span> ) ~~
-            Blues:( <span id="InfoCountBlues">0</span> ) ~~
-            Greens:( <span id="InfoCountGreens">0</span> ) ~~ 
-            Disputed:( <span id="InfoCountDisputes">0</span> ) ~~
-          </div>
-        </div>
+</head>
+<body id="theBody">
 
-    </body>
+  <div id="DisplayTurn" class="invisible">
+    <span id="DisplayTurnPlayerColor" class="greenText"> Player <span id="DisplayTurnPlayerNumber">1</span>'s Turn</span> - Rounds Left: ( <span id="DisplayRoundsLeft">25</span> ) 
+  </div>
+
+  <div id="GameWrap">
+    <div id="CanvasWrap">
+      <div id="CanvasArea">
+        <div id="CanvasBorder">
+          <canvas id="MainCanvas" width="1248" height="1248"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="DisplayEndGame" class="invisible">
+      <p>The Game has ended!</p>
+      <p><span id="DisplayEndGameWinner">Nobody has won!</span></p>
+      <p><button id="ButtonPlayAgain">Play Again!</button></p>
+    </div>
+  </div> <!-- End of Game Wrapper -->
+  
+  <div id="Instructions" class="visible">
+    <div id="InstructionsTextWrap">
+      <h1>Welcome to the Game!</h1>
+        <p><button id="ButtonStartGame">Start Game!</button></p>
+      <h2>Colored Squares</h2>
+        <p>Player 1 is <span class="greenText">Green</span>.</p>
+        <p>Player 2 is <span class="blueText">Blue</span>.</p>
+        <p>Disputed Squares are <span class="redText">Red</span>, <span class="pinkText">Pink</span>, or <span class="grayText">Gray</span></p>
+      <h2>How to Win</h2>
+        <p>The Goal is to have the most squares in your color at the end of 25 rounds.</p>
+      <h2>During Each Round</h2>
+        <p>Each player selects a square on which to drop 💥<span class="redText">La Bomba</span>💥.  This will clear out nearby squares, and advance the game by 1 generation.</p>
+      <h2>At the End</h2>
+        <p>After all of the rounds are finished, player input will stop, the game will advance a few generations on its own, and then all of the square will be counted.</p>
+      <h2>Info Bar</h2>
+      <p>The Info Bar is at the bottom of the screen.  It shows the game's current generation, and the number of squares each player has.</p>
+     
+    </div>
+  </div>
+
+  <div id="InfoBar">
+    <div id="InfoBarText">
+      ~~ Generation:( <span id="InfoBar_Generation">0</span> ) ~~
+      Player1:( <span id="InfoCountGreens">0</span> ) ~~ 
+      Player2:( <span id="InfoCountBlues">0</span> ) ~~
+      Disputed:( <span id="InfoCountDisputes">0</span> ) ~~
+    </div>
+  </div>
+
+
+
+</body>
 </html>
