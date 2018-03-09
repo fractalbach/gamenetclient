@@ -494,6 +494,7 @@ window.onload = function () {
     myLife.generation = 1;
     document.getElementById("InfoBar_Generation").innerHTML = myLife.generation;
   }
+
   GameStartUp();
 
   // Sequence of events that happen when the game ends.
@@ -501,29 +502,43 @@ window.onload = function () {
   // number. 
   function GameEnd()
   {
-    MultipleGameUpdates(10);
     document.getElementById("DisplayTurn").className = "invisible";
     document.getElementById("DisplayEndGame").className = "visible";
-    var winner; 
-    var color;
-    if (myLife.numBlues === myLife.numGreens) {
-      winner = "Tie!";
-      color = "grayText";
-    }
-    if (myLife.numBlues < myLife.numGreens) {
-      winner = "Player 1 has won!";
-      color = "greenText";
-    }
-    if (myLife.numBlues > myLife.numGreens) {
-      winner = "Player 2 has won!";
-      color = "blueText";
-    }
-    document.getElementById("DisplayEndGameWinner").innerHTML = winner;
-    if (color != false) {
-      document.getElementById("DisplayEndGameWinner").className = color;  
-    }
-    
+    GamesOverClearSmoke().then(function()
+    {
+      var winner;
+      var color;
+      if (myLife.numBlues === myLife.numGreens) {
+        winner = "Tie!";
+        color = "grayText";
+      }
+      if (myLife.numBlues < myLife.numGreens) {
+        winner = "Player 1 has won!";
+        color = "greenText";
+      }
+      if (myLife.numBlues > myLife.numGreens) {
+        winner = "Player 2 has won!";
+        color = "blueText";
+      }
+      document.getElementById("DisplayEndGameWinner").innerHTML = winner;
+      if (color != false) {
+        document.getElementById("DisplayEndGameWinner").className = color;  
+      }
+    });
   }
+
+
+  async function GamesOverClearSmoke()
+  {
+    for (var i=1; i<=10; i++) {
+      GameUpdate()
+      document.getElementById("DisplayEndGameWinner").innerHTML = "Smoke Clearing... " + i + " generations later...";
+      await sleep(500);
+    }
+    return true;
+  }
+
+  
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   //                           Game Timer 
