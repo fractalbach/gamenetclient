@@ -362,7 +362,7 @@ function MakeRandomMatrix(w, h, lowval, highval)
   for (var i = 0; i < w; i++) {
     var col = [];
     for (var j = 0; j < h; j++) {
-      col.push(Math.floor(100 * Math.random()) % 3);
+      col.push(getRandomIntInclusive(1,2));
     }
     matrix.push(col);
   }
@@ -484,6 +484,7 @@ window.onload = function () {
     gameHasEnded = false;
     document.getElementById("DisplayEndGame").className = "invisible";
     document.getElementById("DisplayTurn").className = "visible";
+    document.getElementById("DisplayEndGameWinner").className = "";
     GameStartUp();
   }
 
@@ -530,10 +531,10 @@ window.onload = function () {
 
   async function GamesOverClearSmoke()
   {
-    for (var i=1; i<=10; i++) {
+    for (var i=1; i<=20; i++) {
       GameUpdate()
       document.getElementById("DisplayEndGameWinner").innerHTML = "Smoke Clearing... " + i + " generations later...";
-      await sleep(500);
+      await sleep(250);
     }
     return true;
   }
@@ -1158,6 +1159,19 @@ function BoolArrayToBoolMatrix(boolArray, h) {
 // __________________________________________________________________________
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Thank you for the Random Number Functions!
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random#Examples
+//
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+}
+function getRandomIntInclusive(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
+}
 
 
 /*
@@ -1429,6 +1443,8 @@ function snowflake(c, n, x, y, len) {
               color: white;
               box-shadow: 0px 0px 10px 1px;
             }
+            #ButtonPlayAgain {
+            }
             #Instructions {
               z-index: 1;
               border: 2px solid white;
@@ -1447,9 +1463,24 @@ function snowflake(c, n, x, y, len) {
               max-width: 40em;
               margin: auto;
             }
-            #ButtonStartGame {
+            #ButtonStartGame,
+            #ButtonPlayAgain {
               font-size: 200%;
+              background: black;
+              color: white;
+              box-shadow: 0px 0px 0px 0px;
+              border: outset 2px;
+              padding: 2px;
+              display: inline-block;
+              user-select: none;
             }
+            #ButtonStartGame:hover,
+            #ButtonPlayAgain:hover {
+              box-shadow: 0px 0px 5px 1px;
+              border: inset 2px;
+              background: #005;
+            }
+
             h2 {
               border-bottom: 1px solid white;
               display: inline-block;
@@ -1478,14 +1509,14 @@ function snowflake(c, n, x, y, len) {
     <div id="DisplayEndGame" class="invisible">
       <p>The Game has ended!</p>
       <p><span id="DisplayEndGameWinner">Nobody has won!</span></p>
-      <p><button id="ButtonPlayAgain">Play Again!</button></p>
+      <p><div role="button" id="ButtonPlayAgain">Play Again!</div></p>
     </div>
   </div> <!-- End of Game Wrapper -->
   
   <div id="Instructions" class="visible">
     <div id="InstructionsTextWrap">
       <h1>Welcome to the Game!</h1>
-        <p><button id="ButtonStartGame">Start Game!</button></p>
+        <p><div role="button" id="ButtonStartGame">Start Game!</div></p>
       <h2>Colored Squares</h2>
         <p>Player 1 is <span class="greenText">Green</span>.</p>
         <p>Player 2 is <span class="blueText">Blue</span>.</p>
@@ -1504,10 +1535,11 @@ function snowflake(c, n, x, y, len) {
 
   <div id="InfoBar">
     <div id="InfoBarText">
-      ~~ Generation:( <span id="InfoBar_Generation">0</span> ) ~~
+      ~~
       Player1:( <span id="InfoCountGreens">0</span> ) ~~ 
       Player2:( <span id="InfoCountBlues">0</span> ) ~~
       Disputed:( <span id="InfoCountDisputes">0</span> ) ~~
+      Generation:( <span id="InfoBar_Generation">0</span> ) ~~
     </div>
   </div>
 
